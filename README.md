@@ -64,11 +64,11 @@ Due to AI model file size limits on GitHub, please follow these setup instructio
 
 1. Install Prerequisites
 
-#Download and install Python 3.10.
+# Download and install Python 3.10.
 ⚠️ [CRITICAL] Make sure to check the box that says "Add Python.exe to PATH" at the very beginning of the installation!
 2. Download the App
 
-# Click the green "Code" button on this GitHub page and select "Download ZIP".
+# Click the green "release" Link  or select "Download ZIP"on this GitHub page.
 Extract the ZIP file to your preferred location.
 3. Place the AI Model (MiDaS)
 
