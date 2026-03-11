@@ -34,7 +34,7 @@ def check_single_instance():
 # データクラス
 # ══════════════════════════════════════════
 class LightSource:
-    def __init__(self, name, type_name="Point", x=160, y=90):
+    def __init__(self, name, type_name="Point", x=240, y=135):
         self.name = name
         self.type = type_name
         self.pos = QPoint(x, y)
@@ -57,21 +57,16 @@ class DepthEstimationThread(QThread):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         from midas.model_loader import load_model
-        # ★ 軽量モデルに変更: 344Mパラメータ → ~6Mパラメータ（50倍以上高速）
-        m_path = os.path.join(current_dir, "model", "midas_v21_small_256.pt")
-        self.model, self.transform, _, _ = load_model(self.device, m_path, "midas_v21_small_256", optimize=True)
+        m_path = os.path.join(current_dir, "model", "dpt_beit_large_384.pt")
+        self.model, self.transform, _, _ = load_model(self.device, m_path, "dpt_beit_large_384", optimize=True)
         if self.device.type == "cuda": self.model = self.model.half()
         self.model.eval()
 
         self.tracker = YOLO("yolov8n.pt")
         self.cached_depth = None
         self.last_ai_time = 0
-        self.calc_w, self.calc_h = 320, 180  # ★軽量化: 480x270→320x180
+        self.calc_w, self.calc_h = 480, 270
         self.Y_grid, self.X_grid = np.mgrid[:self.calc_h, :self.calc_w].astype(np.float32)
-        # ★軽量化: バッファ事前確保（毎フレームのメモリ確保を回避）
-        self._canvas_buf = np.zeros((self.calc_h, self.calc_w, 3), dtype=np.float32)
-        self._target_interval = 1.0 / 15  # ★軽量化: 15FPSキャップ
-        self._midas_input_size = 256  # ★ midas_v21_small_256に最適
 
     def run(self):
         import warnings
@@ -80,16 +75,17 @@ class DepthEstimationThread(QThread):
         camera.start(video_mode=True)
         try:
             while self.running:
-                frame_start = time.time()
                 frame = camera.get_latest_frame()
                 if frame is None:
                     time.sleep(0.01)
                     continue
 
+                # 🌟【改善1】元の超高画質(1080p)を「下地」として絶対に劣化させない！
+                original_frame = frame.astype(np.float32)
+
                 now = time.time()
-                # ★軽量化: 軽量モデルなので2秒間隔でOK
-                if self.cached_depth is None or now - self.last_ai_time > 2.0:
-                    inp = cv2.resize(frame, (self._midas_input_size, self._midas_input_size))
+                if self.cached_depth is None or now - self.last_ai_time > 1.5:
+                    inp = cv2.resize(frame, (384, 384))
                     rgb = cv2.cvtColor(inp, cv2.COLOR_BGR2RGB) / 255.0
                     blob = self.transform({"image": rgb})["image"]
                     blob = torch.from_numpy(blob).unsqueeze(0).to(self.device)
@@ -98,44 +94,40 @@ class DepthEstimationThread(QThread):
                         out = self.model(blob)
                         out = torch.nn.functional.interpolate(out.unsqueeze(1), size=(self.calc_h, self.calc_w), mode="bilinear").squeeze()
                     self.cached_depth = cv2.normalize(out.float().cpu().numpy(), None, 0, 255, cv2.NORM_MINMAX).astype(np.float32)
-                    # ★軽量化: char_maskもAI推論時だけ計算してキャッシュ
-                    self._cached_char_mask = cv2.GaussianBlur(np.clip((self.cached_depth - 100.0) / 80.0, 0, 1), (7, 7), 0)
                     self.last_ai_time = now
 
-                lights = self.overlay.lights
-                # ★軽量化: ライトが無い場合は合成処理をスキップ
-                if not lights or self.cached_depth is None:
-                    self.render_ready.emit(QImage(frame.data, 1920, 1080, 1920*3, QImage.Format_BGR888).copy())
-                else:
-                    # バッファをゼロクリア（新規確保より高速）
-                    self._canvas_buf[:] = 0
-                    char_mask_2d = self._cached_char_mask
-
-                    for l in lights:
-                        dx = self.X_grid - l.pos.x()
-                        dy = self.Y_grid - l.pos.y()
-                        dist = np.sqrt(dx * dx + dy * dy)
+                # 🌟【改善2】「光のレイヤー」だけを軽い解像度で作る
+                canvas_small = np.zeros((self.calc_h, self.calc_w, 3), dtype=np.float32)
+                
+                if self.cached_depth is not None:
+                    d_map = self.cached_depth
+                    # キャラクターの形を切り抜くマスクも、少しぼかして馴染ませる
+                    char_mask = cv2.GaussianBlur(np.clip((d_map - 100.0) / 80.0, 0, 1), (15, 15), 0)[:, :, None]
+                    
+                    for l in self.overlay.lights:
+                        dist = np.sqrt((self.X_grid - l.pos.x())**2 + (self.Y_grid - l.pos.y())**2)
                         r_scaled = max(l.radius * self.calc_w / 1920, 1.0)
                         f_att = np.clip(1.0 - dist / r_scaled, 0, 1)
-                        alpha = f_att * char_mask_2d * (l.intensity / 255.0) * 0.5
+                        
+                        # ★ 光を上品に弱める（0.5を掛けてベースの強さを抑える）
+                        alpha = f_att * char_mask[:, :, 0] * (l.intensity / 255.0) * 0.5
+                        
                         light_bgr = np.array([l.color.blue(), l.color.green(), l.color.red()], dtype=np.float32)
-                        self._canvas_buf += alpha[:, :, None] * light_bgr
+                        canvas_small += alpha[:, :, None] * light_bgr
 
-                    # ★軽量化: ぼかしカーネル縮小 31→15
-                    canvas_blurred = cv2.GaussianBlur(self._canvas_buf, (15, 15), 0)
-                    # ★軽量化: INTER_LINEAR（高速）
-                    canvas_1080 = cv2.resize(canvas_blurred, (1920, 1080), interpolation=cv2.INTER_LINEAR)
-                    canvas_u8 = np.clip(canvas_1080, 0, 255).astype(np.uint8)
+                # 🌟【改善3】光のレイヤー自体に「強力なガウスぼかし」をかけて、フワッとした光にする
+                canvas_small = cv2.GaussianBlur(canvas_small, (31, 31), 0)
 
-                    # ★軽量化: スクリーン合成(float)→加算合成(uint8)で大幅高速化
-                    final_u8 = cv2.add(frame, canvas_u8)
-                    self.render_ready.emit(QImage(final_u8.data, 1920, 1080, 1920*3, QImage.Format_BGR888).copy())
-
-                # ★軽量化: 15FPSキャップ（余った時間はスリープ）
-                elapsed = time.time() - frame_start
-                sleep_time = self._target_interval - elapsed
-                if sleep_time > 0:
-                    time.sleep(sleep_time)
+                # 🌟【改善4】ふんわりした光をフルHDに引き伸ばして、高画質な下地に合成！
+                canvas_1080 = cv2.resize(canvas_small, (1920, 1080), interpolation=cv2.INTER_CUBIC)
+                canvas_1080 = np.clip(canvas_1080, 0, 255)
+                
+                # スクリーン合成（元の画質を保ったまま、光だけを乗せる）
+                final_f = 255.0 - (255.0 - original_frame) * (255.0 - canvas_1080) / 255.0
+                final_u8 = np.clip(final_f, 0, 255).astype(np.uint8)
+                
+                # これでUIに送る映像は「元の高画質＋ふんわりライト」になるぜ
+                self.render_ready.emit(QImage(final_u8.data, 1920, 1080, 1920*3, QImage.Format_BGR888).copy())
         finally:
             camera.stop()
 
@@ -148,7 +140,6 @@ class LightingOverlay(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setGeometry(0, 0, 1920, 1080)
-        self.setMouseTracking(True)  # ★ マウストラッキング有効化
         
         # ★【光学迷彩モード】カメラ（dxcam）に自分を映さない魔法だ！
         try:
@@ -161,7 +152,6 @@ class LightingOverlay(QWidget):
         self.rendered_image = None
         self.placement_mode = False
         self.ctrl = None
-        self._last_move_time = 0  # ★ マウス移動スロットリング用
 
     def update_render(self, img):
         self.rendered_image = img
@@ -185,24 +175,15 @@ class LightingOverlay(QWidget):
         self.update()
 
     def mousePressEvent(self, event):
-        if self.placement_mode:
-            self.move_light(event.pos())
-            self.activateWindow()  # ★ オーバーレイにフォーカスを確保
+        if self.placement_mode: self.move_light(event.pos())
 
     def mouseMoveEvent(self, event):
-        if not self.placement_mode:
-            return
-        # ★ ドラッグ中またはマウス移動のどちらでも追従
-        now = time.time()
-        if now - self._last_move_time < 0.03:  # 30msスロットリング
-            return
-        self._last_move_time = now
-        self.move_light(event.pos())
+        if self.placement_mode and event.buttons() & Qt.LeftButton: self.move_light(event.pos())
 
     def move_light(self, pos):
         r = self.ctrl.list.currentRow()
         if r >= 0 and r < len(self.lights):
-            self.lights[r].pos = QPoint(int(pos.x() * 320 / 1920), int(pos.y() * 180 / 1080))
+            self.lights[r].pos = QPoint(int(pos.x()*480/1920), int(pos.y()*270/1080))
 
 class ControlPanel(QWidget):
     def __init__(self, overlay):
@@ -229,11 +210,6 @@ class ControlPanel(QWidget):
         self.list.currentRowChanged.connect(self.sync_ui)
         layout.addWidget(QLabel("📌 ライトリスト"))
         layout.addWidget(self.list)
-
-        self.btn_del = QPushButton("🗑 選択ライト削除")
-        self.btn_del.setStyleSheet("background:#a00; color:white; font-weight:bold; height:32px;")
-        self.btn_del.clicked.connect(self.delete_light)
-        layout.addWidget(self.btn_del)
 
         for t in ["Sunlight", "Rim", "Point", "Area"]:
             btn = QPushButton(f"＋ {t} 追加")
@@ -283,13 +259,6 @@ class ControlPanel(QWidget):
         if 0 <= r < len(self.overlay.lights):
             c = QColorDialog.getColor(self.overlay.lights[r].color)
             if c.isValid(): self.overlay.lights[r].color = c
-
-    def delete_light(self):
-        r = self.list.currentRow()
-        if 0 <= r < len(self.overlay.lights):
-            self.overlay.lights.pop(r)
-            self.list.takeItem(r)
-            self.overlay.update()
 
     def take_screenshot(self):
         img = self.overlay.rendered_image
