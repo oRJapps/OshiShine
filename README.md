@@ -49,39 +49,35 @@ AIモデルの容量制限のため、以下の手順でセットアップして
 ---
 
 <a id="english"></a>
-## 🇬🇧 English
+🇬🇧 English
+OshiShine GOD Edition is the ultimate creator's tool that uses real-time AI depth estimation to apply stunning, custom lighting effects to your game screen or screen captures. It perfectly preserves your original high-resolution footage while adding soft lights, dramatic shadows, and cinematic rim lighting.
 
-**OshiShine GOD Edition** is the ultimate creator's tool that uses real-time AI depth estimation to apply stunning, custom lighting effects to your game screen or screen captures. It perfectly preserves your original high-resolution footage while adding soft lights, dramatic shadows, and cinematic rim lighting.
-
-### 🚀 Key Features
-* **Real-time AI Depth Estimation**: Uses the MiDaS model to automatically separate the foreground from the background.
-* **Auto Person Tracking**: Uses YOLOv8 to make lights automatically follow characters.
-* **Custom Lights**: Add Sunlight, Point, Area, and Rim lights. Supports blending modes like Add, Screen, Dodge, Multiply, and Darken.
-* **Lossless Quality & 4K Export**: Maintains original game resolution and allows one-click 4K upscaled screenshot saving (S key).
-* **Vignette Effect**: Darkens the edges of the screen to draw focus to the center.
-
-### 🛠️ Installation Guide
-
+🚀 Key Features
+Real-time AI Depth Estimation: Uses the MiDaS model to automatically separate the foreground from the background.
+Auto Person Tracking: Uses YOLOv8 to make lights automatically follow characters.
+Custom Lights: Add Sunlight, Point, Area, and Rim lights. Supports blending modes like Add, Screen, Dodge, Multiply, and Darken.
+Lossless Quality & 4K Export: Maintains original game resolution and allows one-click 4K upscaled screenshot saving (S key).
+Vignette Effect: Darkens the edges of the screen to draw focus to the center.
+🛠️ Installation Guide
 Due to AI model file size limits on GitHub, please follow these setup instructions:
 
-**1. Install Prerequisites**
-* Download and install [Python 3.10](https://www.python.org/downloads/release/python-3100/).
-* ⚠️ **[CRITICAL]** Make sure to check the box that says **"Add Python.exe to PATH"** at the very beginning of the installation!
+1. Install Prerequisites
 
-**2. Download the App**
-* Click the green **"Code"** button on this GitHub page and select **"Download ZIP"**.
-* Extract the ZIP file to your preferred location.
+Download and install Python 3.10.
+⚠️ [CRITICAL] Make sure to check the box that says "Add Python.exe to PATH" at the very beginning of the installation!
+2. Download the App
 
-**3. Place the AI Model (MiDaS)**
-* [Download the MiDaS model: dpt_beit_large_384.pt (~344MB)](https://github.com/isl-org/MiDaS/releases/download/v3_1/dpt_beit_large_384.pt).
-* Inside the extracted app folder, create a new folder named **`model`**.
-* Place the downloaded `dpt_beit_large_384.pt` file inside this `model` folder.
+Click the green "Code" button on this GitHub page and select "Download ZIP".
+Extract the ZIP file to your preferred location.
+3. Place the AI Model (MiDaS)
 
-### 🎮 How to Run & Use
-
-1. Double-click the **`Install_and_Start.bat`** file.
-   * On the first run, it will automatically set up a virtual environment and download necessary components (like the YOLO tracking model). Please be patient.
-2. Once the app launches, use the UI panel to add and tweak your lights.
-3. **Controls**:
-   * `F9`: Toggle Light Placement Mode (Click anywhere on the screen to move the selected light).
-   * `S`: Save a high-quality 4K screenshot with your current lighting setup.
+Download the MiDaS model: dpt_beit_large_384.pt (~344MB).
+Inside the extracted app folder, create a new folder named model.
+Place the downloaded dpt_beit_large_384.pt file inside this model folder.
+🎮 How to Run & Use
+Double-click the Install_and_Start.bat file.
+On the first run, it will automatically set up a virtual environment and download necessary components (like the YOLO tracking model). Please be patient.
+Once the app launches, use the UI panel to add and tweak your lights.
+Controls:
+F9: Toggle Light Placement Mode (Click anywhere on the screen to move the selected light).
+S: Save a high-quality 4K screenshot with your current lighting setup.
