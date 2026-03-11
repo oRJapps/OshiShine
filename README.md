@@ -30,7 +30,7 @@ AIモデルの容量制限のため、以下の手順でセットアップして
 * 好きな場所にZIPファイルを解凍してください。
 
 **3. AIモデル（MiDaS）の配置**
-* [MiDaS の dpt_beit_large_384.pt (約1.5GB) をダウンロード](https://github.com/isl-org/MiDaS/releases/download/v3_1/) します。
+* [MiDaS の midas_v21_small_256.pt (約80MB) をダウンロード](https://github.com/isl-org/MiDaS/releases) します。
 * 解凍したアプリのフォルダ内に **`model`** という名前の新しいフォルダを作成します。
 * ダウンロードした `dpt_beit_large_384.pt` を、その `model` フォルダの中に入れます。
 ![](images/2.png)
@@ -58,23 +58,25 @@ Auto Person Tracking: Uses YOLOv8 to make lights automatically follow characters
 Custom Lights: Add Sunlight, Point, Area, and Rim lights. Supports blending modes like Add, Screen, Dodge, Multiply, and Darken.
 Lossless Quality & 4K Export: Maintains original game resolution and allows one-click 4K upscaled screenshot saving (S key).
 Vignette Effect: Darkens the edges of the screen to draw focus to the center.
-🛠️ Installation Guide
+
+#🛠️ Installation Guide
 Due to AI model file size limits on GitHub, please follow these setup instructions:
 
 1. Install Prerequisites
 
-Download and install Python 3.10.
+#Download and install Python 3.10.
 ⚠️ [CRITICAL] Make sure to check the box that says "Add Python.exe to PATH" at the very beginning of the installation!
 2. Download the App
 
-Click the green "Code" button on this GitHub page and select "Download ZIP".
+# Click the green "Code" button on this GitHub page and select "Download ZIP".
 Extract the ZIP file to your preferred location.
 3. Place the AI Model (MiDaS)
 
-Download the MiDaS model: dpt_beit_large_384.pt (~344MB).
+Download the MiDaS model: midas_v21_small_256.pt (~80MB).
 Inside the extracted app folder, create a new folder named model.
-Place the downloaded dpt_beit_large_384.pt file inside this model folder.
-🎮 How to Run & Use
+Place the downloaded midas_v21_small_256.pt file inside this model folder.
+
+# 🎮 How to Run & Use
 Double-click the Install_and_Start.bat file.
 On the first run, it will automatically set up a virtual environment and download necessary components (like the YOLO tracking model). Please be patient.
 Once the app launches, use the UI panel to add and tweak your lights.
