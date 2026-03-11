@@ -30,7 +30,7 @@ AIモデルの容量制限のため、以下の手順でセットアップして
 * 好きな場所にZIPファイルを解凍してください。
 
 **3. AIモデル（MiDaS）の配置**
-* [MiDaS の dpt_beit_large_384.pt (約344MB) をダウンロード](https://github.com/isl-org/MiDaS/releases/download/v3_1/) します。
+* [MiDaS の dpt_beit_large_384.pt (約1.5GB) をダウンロード](https://github.com/isl-org/MiDaS/releases/download/v3_1/) します。
 * 解凍したアプリのフォルダ内に **`model`** という名前の新しいフォルダを作成します。
 * ダウンロードした `dpt_beit_large_384.pt` を、その `model` フォルダの中に入れます。
 ![](images/2.png)
