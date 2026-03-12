@@ -1,6 +1,11 @@
 import sys
 import os
 import ctypes
+
+# ★ pythonw 起動時に print などの標準出力でクラッシュするのを防ぐ最強の対策
+log_file = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Oshi_Shine_Debug.log"), "w", encoding="utf-8")
+sys.stdout = log_file
+sys.stderr = log_file
 import time
 import multiprocessing
 import numpy as np
@@ -173,11 +178,11 @@ class LightingOverlay(QWidget):
             painter.drawImage(self.rect(), self.rendered_image)
         if self.placement_mode:
             painter.setPen(QColor(0, 255, 255))
-            painter.drawText(20, 40, "★ 配置モード(F9) - クリックで移動 / Sで4K保存")
+            painter.drawText(20, 40, "★ 配置モード(F9) - クリックで移動 / F10で4K保存")
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F9: self.toggle_mode()
-        if event.key() == Qt.Key_S: self.ctrl.take_screenshot()
+        if event.key() == Qt.Key_F10: self.ctrl.take_screenshot()
 
     def toggle_mode(self):
         self.placement_mode = not self.placement_mode
@@ -252,7 +257,7 @@ class ControlPanel(QWidget):
         self.btn_col.clicked.connect(self.pick_color)
         layout.addWidget(self.btn_col)
 
-        self.btn_snap = QPushButton("📸 4K高画質保存 (S)")
+        self.btn_snap = QPushButton("📸 4K高画質保存 (F10)")
         self.btn_snap.setStyleSheet("background:#05a; color:white; font-weight:bold; height:40px;")
         self.btn_snap.clicked.connect(self.take_screenshot)
         layout.addWidget(self.btn_snap)
@@ -304,7 +309,7 @@ class ControlPanel(QWidget):
             fname = os.path.join(save_path, f"4K_{int(time.time())}.png")
             img.scaled(3840, 2160, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).save(fname, "PNG")
             self.btn_snap.setText("✅ SAVED!")
-            QTimer.singleShot(1000, lambda: self.btn_snap.setText("📸 4K高画質保存 (S)"))
+            QTimer.singleShot(1000, lambda: self.btn_snap.setText("📸 4K高画質保存 (F10)"))
 
 # ══════════════════════════════════════════
 # 実行
