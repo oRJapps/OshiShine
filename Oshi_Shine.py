@@ -182,12 +182,17 @@ class LightingOverlay(QWidget):
     def toggle_mode(self):
         self.placement_mode = not self.placement_mode
         self.ctrl.chk_move.setChecked(self.placement_mode)
+        if not self.placement_mode:
+            # ★ 配置モード解除時にコントロールパネルを前面に復帰
+            self.ctrl.raise_()
+            self.ctrl.activateWindow()
         self.update()
 
     def mousePressEvent(self, event):
         if self.placement_mode:
             self.move_light(event.pos())
             self.activateWindow()  # ★ オーバーレイにフォーカスを確保
+            self.ctrl.raise_()     # ★ コントロールパネルも前面に保つ
 
     def mouseMoveEvent(self, event):
         if not self.placement_mode:
@@ -281,7 +286,7 @@ class ControlPanel(QWidget):
     def pick_color(self):
         r = self.list.currentRow()
         if 0 <= r < len(self.overlay.lights):
-            c = QColorDialog.getColor(self.overlay.lights[r].color)
+            c = QColorDialog.getColor(self.overlay.lights[r].color, self, "ライトの色を選択")
             if c.isValid(): self.overlay.lights[r].color = c
 
     def delete_light(self):
